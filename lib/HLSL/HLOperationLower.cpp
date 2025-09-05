@@ -1751,15 +1751,29 @@ Value *GenerateCmpNEZero(Value *val, IRBuilder<> Builder) {
   return Builder.CreateICmpNE(val, zero);
 }
 
-Value *TranslateAllForValue(Value *val, IRBuilder<> &Builder) {
-  Value *cond = GenerateCmpNEZero(val, Builder);
+Value *TranslateAllForValue(Value *val, IRBuilder<> &Builder, hlsl::OP *hlslOP) {
 
   Type *Ty = val->getType();
   Type *EltTy = Ty->getScalarType();
 
   if (Ty == EltTy)
-    return cond;
+    return GenerateCmpNEZero(val, Builder);
 
+  // Since VectorReduceAnd is only defined for integer types the vectorization
+  // optimization doesn't help on FP types. It could be lowered as
+  // N * FCmpUNE + N * insertelement + VectorReduceAnd but that is one more
+  // instruction than N * FCmpUNE + N * bitwise and
+  if (hlslOP->GetModule()->GetHLModule().GetShaderModel()->IsSM69Plus() && EltTy->isIntegerTy()) {
+    Constant *opArg = hlslOP->GetU32Const((unsigned)DXIL::OpCode::VectorReduceAnd);
+    Value *args[] = {opArg, val};
+    Function *dxilFunc = hlslOP->GetOpFunc(DXIL::OpCode::VectorReduceAnd, Ty);
+    Value *ReducedVal = TrivialDxilVectorOperation(dxilFunc, DXIL::OpCode::VectorReduceAnd, args, Ty,
+                                                   hlslOP, Builder);
+    return GenerateCmpNEZero(ReducedVal, Builder);
+
+  }
+
+  Value *cond = GenerateCmpNEZero(val, Builder);
   Value *Result = Builder.CreateExtractElement(cond, (uint64_t)0);
   for (unsigned i = 1; i < Ty->getVectorNumElements(); i++) {
     Value *Elt = Builder.CreateExtractElement(cond, i);
@@ -1775,7 +1789,7 @@ Value *TranslateAll(CallInst *CI, IntrinsicOp IOP, OP::OpCode opcode,
                     bool &Translated) {
   Value *val = CI->getArgOperand(HLOperandIndex::kUnaryOpSrc0Idx);
   IRBuilder<> Builder(CI);
-  return TranslateAllForValue(val, Builder);
+  return TranslateAllForValue(val, Builder, &helper.hlslOP);
 }
 
 Value *TranslateAny(CallInst *CI, IntrinsicOp IOP, OP::OpCode opcode,
