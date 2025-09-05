@@ -60,7 +60,10 @@ public:
       if (!HlslOP->GetOpCodeClass(Func, OpClass))
         continue;
 
-      bool NeedsRewrite = (Func->getReturnType()->isVectorTy() || OpClass == DXIL::OpCodeClass::RawBufferVectorLoad || OpClass == DXIL::OpCodeClass::RawBufferVectorStore || OpClass == DXIL::OpCodeClass::VectorReduce);
+      bool NeedsRewrite = (Func->getReturnType()->isVectorTy() ||
+                           OpClass == DXIL::OpCodeClass::RawBufferVectorLoad ||
+                           OpClass == DXIL::OpCodeClass::RawBufferVectorStore ||
+                           OpClass == DXIL::OpCodeClass::VectorReduce);
       if (!NeedsRewrite)
         continue;
 
@@ -80,7 +83,6 @@ public:
 
         Changed = true;
       }
-
     }
     return Changed;
   }
@@ -238,22 +240,23 @@ static void scalarizeVectorStore(hlsl::OP *HlslOP, const DataLayout &DL,
 static void scalarizeVectorReduce(hlsl::OP *HlslOP, CallInst *CI) {
   IRBuilder<> Builder(CI);
 
-  ConstantInt* ReduceOp = dyn_cast<ConstantInt>(CI->getArgOperand(0));
+  ConstantInt *ReduceOp = dyn_cast<ConstantInt>(CI->getArgOperand(0));
   assert(ReduceOp && "Arg0 must be a constant int");
 
   // ReductionOp = and
 
   switch (ReduceOp->getLimitedValue()) {
-    case (unsigned)DXIL::OpCode::VectorReduceAnd:
-      break;
-    default:
-      assert(false && "Unexpected VectorReduce OpCode");
+  case (unsigned)DXIL::OpCode::VectorReduceAnd:
+    break;
+  default:
+    assert(false && "Unexpected VectorReduce OpCode");
   }
 
   Value *VecArg = CI->getArgOperand(1);
   Type *VecTy = VecArg->getType();
 
-  Value *Result = Builder.CreateExtractElement(VecArg, VecTy->getVectorNumElements());
+  Value *Result =
+      Builder.CreateExtractElement(VecArg, VecTy->getVectorNumElements());
   for (unsigned i = VecTy->getVectorNumElements(); i > 0; i--) {
     Value *Elt = Builder.CreateExtractElement(VecArg, i);
     Result = Builder.CreateAnd(Result, Elt);

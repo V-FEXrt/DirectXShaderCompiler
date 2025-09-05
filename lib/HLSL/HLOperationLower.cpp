@@ -1751,7 +1751,8 @@ Value *GenerateCmpNEZero(Value *val, IRBuilder<> Builder) {
   return Builder.CreateICmpNE(val, zero);
 }
 
-Value *TranslateAllForValue(Value *val, IRBuilder<> &Builder, hlsl::OP *hlslOP) {
+Value *TranslateAllForValue(Value *val, IRBuilder<> &Builder,
+                            hlsl::OP *hlslOP) {
 
   Type *Ty = val->getType();
   Type *EltTy = Ty->getScalarType();
@@ -1763,14 +1764,15 @@ Value *TranslateAllForValue(Value *val, IRBuilder<> &Builder, hlsl::OP *hlslOP) 
   // optimization doesn't help on FP types. It could be lowered as
   // N * FCmpUNE + N * insertelement + VectorReduceAnd but that is one more
   // instruction than N * FCmpUNE + N * bitwise and
-  if (hlslOP->GetModule()->GetHLModule().GetShaderModel()->IsSM69Plus() && EltTy->isIntegerTy()) {
-    Constant *opArg = hlslOP->GetU32Const((unsigned)DXIL::OpCode::VectorReduceAnd);
+  if (hlslOP->GetModule()->GetHLModule().GetShaderModel()->IsSM69Plus() &&
+      EltTy->isIntegerTy()) {
+    Constant *opArg =
+        hlslOP->GetU32Const((unsigned)DXIL::OpCode::VectorReduceAnd);
     Value *args[] = {opArg, val};
     Function *dxilFunc = hlslOP->GetOpFunc(DXIL::OpCode::VectorReduceAnd, Ty);
-    Value *ReducedVal = TrivialDxilVectorOperation(dxilFunc, DXIL::OpCode::VectorReduceAnd, args, Ty,
-                                                   hlslOP, Builder);
+    Value *ReducedVal = TrivialDxilVectorOperation(
+        dxilFunc, DXIL::OpCode::VectorReduceAnd, args, Ty, hlslOP, Builder);
     return GenerateCmpNEZero(ReducedVal, Builder);
-
   }
 
   Value *cond = GenerateCmpNEZero(val, Builder);
