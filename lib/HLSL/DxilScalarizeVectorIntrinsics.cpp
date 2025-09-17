@@ -14,6 +14,7 @@
 #include "dxc/DXIL/DxilModule.h"
 #include "dxc/HLSL/DxilGenerationPass.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -33,6 +34,7 @@ static bool scalarizeVectorStore(hlsl::OP *HlslOP, const DataLayout &DL,
                                  CallInst *CI);
 static bool scalarizeVectorIntrinsic(hlsl::OP *HlslOP, CallInst *CI);
 static bool scalarizeVectorReduce(hlsl::OP *HlslOP, CallInst *CI);
+static bool scalarizeVectorDot(hlsl::OP *HlslOP, CallInst *CI);
 static bool scalarizeVectorWaveMatch(hlsl::OP *HlslOP, CallInst *CI);
 
 class DxilScalarizeVectorIntrinsics : public ModulePass {
@@ -65,6 +67,7 @@ public:
                            OpClass == DXIL::OpCodeClass::RawBufferVectorLoad ||
                            OpClass == DXIL::OpCodeClass::RawBufferVectorStore ||
                            OpClass == DXIL::OpCodeClass::VectorReduce ||
+                           OpClass == DXIL::OpCodeClass::Dot ||
                            OpClass == DXIL::OpCodeClass::WaveMatch);
       if (!CouldRewrite)
         continue;
@@ -82,6 +85,9 @@ public:
           continue;
         case DXIL::OpCodeClass::VectorReduce:
           Changed |= scalarizeVectorReduce(HlslOP, CI);
+          continue;
+        case DXIL::OpCodeClass::Dot:
+          Changed |= scalarizeVectorDot(HlslOP, CI);
           continue;
         case DXIL::OpCodeClass::WaveMatch:
           Changed |= scalarizeVectorWaveMatch(HlslOP, CI);
@@ -371,6 +377,65 @@ static bool scalarizeVectorIntrinsic(hlsl::OP *HlslOP, CallInst *CI) {
   CI->replaceAllUsesWith(RetVal);
   CI->eraseFromParent();
   return true;
+}
+
+// Scalarize vectorized dot product
+//  %173 = call float @dx.op.dot.v4f32(i32 311, <4 x float> %13, <4 x float> %23)  ; FDot(a,b)
+static bool scalarizeVectorDot(hlsl::OP *HlslOP, CallInst *CI) {
+  IRBuilder<> Builder(CI);
+
+  Value *AVecArg = CI->getArgOperand(1);
+  Value *BVecArg = CI->getArgOperand(2);
+  VectorType *VecTy = cast<VectorType>(AVecArg->getType());
+  Type *ScalarTy = VecTy->getScalarType();
+  unsigned VecSize = VecTy->getNumElements();
+
+  // The only valid opcode is FDot which only has floating point overload.
+  // If we hit this assert then this functions lowering needs to be updated
+  assert(ScalarTy->isFloatingPointTy() && "Unexpected scalar type");
+
+  SmallVector<Value *, 4> AElts(VecSize);
+  SmallVector<Value *, 4> BElts(VecSize);
+
+  for (unsigned EltIdx = 0; EltIdx < VecSize; EltIdx++) {
+    AElts[EltIdx] = Builder.CreateExtractElement(AVecArg, EltIdx);
+    BElts[EltIdx] = Builder.CreateExtractElement(BVecArg, EltIdx);
+  }
+
+  if (VecSize <= 4) {
+    DXIL::OpCode DotOp = DXIL::OpCode::Dot4;
+    switch (VecSize) {
+      case 2:
+        DotOp = DXIL::OpCode::Dot2;
+        break;
+      case 3:
+        DotOp = DXIL::OpCode::Dot3;
+        break;
+      case 4:
+        DotOp = DXIL::OpCode::Dot4;
+        break;
+      default:
+        assert(false && "Unexpected vectory size");
+        break;
+    }
+
+    SmallVector<Value *, 9> Args(VecSize*2+1);
+    Args[0] = Builder.getInt32((unsigned)DotOp);
+
+    for (unsigned EltIdx = 0; EltIdx < VecSize; EltIdx++) {
+      Args[EltIdx + 1] = AElts[EltIdx];
+      Args[EltIdx + 1 + VecSize] = BElts[EltIdx];
+    }
+
+    Function *Func = HlslOP->GetOpFunc(DotOp, ScalarTy);
+    Value *DotCI = Builder.CreateCall(Func, Args, CI->getName());
+    CI->replaceAllUsesWith(DotCI);
+    return true;
+  }
+
+  // FMad
+  assert(false && "Not implemented");
+  return false;
 }
 
 char DxilScalarizeVectorIntrinsics::ID = 0;

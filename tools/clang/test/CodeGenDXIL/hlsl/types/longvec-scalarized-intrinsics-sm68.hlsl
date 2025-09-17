@@ -145,11 +145,28 @@ float4 main(uint i : SV_PrimitiveID, uint4 m : M) : SV_Target {
   // CHECK: call float @dx.op.unary.f32(i32 21, float %{{.*}}) ; Exp(value)
   res += pow(vec1, vec2);
 
+  float2 vec1_sub2 = {vec1[0], vec1[1]};
+  float2 vec2_sub2 = {vec2[0], vec2[1]};
+  float3 vec1_sub3 = {vec1[0], vec1[1], vec1[2]};
+  float3 vec2_sub3 = {vec2[0], vec2[1], vec2[2]};
+  float4 dot_res;
+
   // CHECK: mul i32
   // CHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) ; UMad(a,b,c)
   // CHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) ; UMad(a,b,c)
   // CHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) ; UMad(a,b,c)
-  res += dot(ivec1, ivec2);
+  dot_res[0] = dot(ivec1, ivec2);
+
+  // CHECK: call float @dx.op.dot4.f32(i32 56, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})  ; Dot4(ax,ay,az,aw,bx,by,bz,bw)
+  dot_res[1] = dot(vec1_sub2, vec2_sub2);
+
+  // CHECK: call float @dx.op.dot4.f32(i32 56, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})  ; Dot4(ax,ay,az,aw,bx,by,bz,bw)
+  dot_res[2] = dot(vec1_sub3, vec2_sub3);
+
+  // CHECK: call float @dx.op.dot4.f32(i32 56, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})  ; Dot4(ax,ay,az,aw,bx,by,bz,bw)
+  dot_res[3] = dot(vec1, vec2);
+
+  res += dot_res;
 
   // CHECK: call float  @dx.op.unary.f32(i32 29, float  %{{.*}}) ; Round_z(value)
   // CHECK: call float  @dx.op.unary.f32(i32 29, float  %{{.*}}) ; Round_z(value)
