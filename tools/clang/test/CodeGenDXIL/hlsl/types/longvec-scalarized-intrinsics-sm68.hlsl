@@ -145,28 +145,27 @@ float4 main(uint i : SV_PrimitiveID, uint4 m : M) : SV_Target {
   // CHECK: call float @dx.op.unary.f32(i32 21, float %{{.*}}) ; Exp(value)
   res += pow(vec1, vec2);
 
-  float2 vec1_sub2 = {vec1[0], vec1[1]};
-  float2 vec2_sub2 = {vec2[0], vec2[1]};
-  float3 vec1_sub3 = {vec1[0], vec1[1], vec1[2]};
-  float3 vec2_sub3 = {vec2[0], vec2[1], vec2[2]};
-  float4 dot_res;
+  vector<float, 2> fDot2L = rbuf.Load< vector<float, 2> >(i++*32);
+  vector<float, 2> fDot2R = rbuf.Load< vector<float, 2> >(i++*32);
+  vector<float, 3> fDot3L = rbuf.Load< vector<float, 3> >(i++*32);
+  vector<float, 3> fDot3R = rbuf.Load< vector<float, 3> >(i++*32);
+  vector<float, 4> fDot4L = rbuf.Load< vector<float, 4> >(i++*32);
+  vector<float, 4> fDot4R = rbuf.Load< vector<float, 4> >(i++*32);
+  vector<float, 4> fDotRes = 0;
 
-  // CHECK: mul i32
-  // CHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) ; UMad(a,b,c)
-  // CHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) ; UMad(a,b,c)
-  // CHECK: call i32 @dx.op.tertiary.i32(i32 49, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}) ; UMad(a,b,c)
-  dot_res[0] = dot(ivec1, ivec2);
+  // CHECK: fmul fast float %{{.*}}, %{{.*}}
+  fDotRes[0] = dot(fDot2L.x, fDot4R.w);
+
+  // CHECK: call float @dx.op.dot2.f32(i32 54, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})  ; Dot2(ax,ay,bx,by)
+  fDotRes[1] = dot(fDot2L, fDot2R);
+
+  // CHECK: call float @dx.op.dot3.f32(i32 55, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})  ; Dot3(ax,ay,az,bx,by,bz)
+  fDotRes[2] = dot(fDot3L, fDot3R);
 
   // CHECK: call float @dx.op.dot4.f32(i32 56, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})  ; Dot4(ax,ay,az,aw,bx,by,bz,bw)
-  dot_res[1] = dot(vec1_sub2, vec2_sub2);
+  fDotRes[3] = dot(fDot4L, fDot4R);
 
-  // CHECK: call float @dx.op.dot4.f32(i32 56, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})  ; Dot4(ax,ay,az,aw,bx,by,bz,bw)
-  dot_res[2] = dot(vec1_sub3, vec2_sub3);
-
-  // CHECK: call float @dx.op.dot4.f32(i32 56, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}})  ; Dot4(ax,ay,az,aw,bx,by,bz,bw)
-  dot_res[3] = dot(vec1, vec2);
-
-  res += dot_res;
+  res += fDotRes;
 
   // CHECK: call float  @dx.op.unary.f32(i32 29, float  %{{.*}}) ; Round_z(value)
   // CHECK: call float  @dx.op.unary.f32(i32 29, float  %{{.*}}) ; Round_z(value)
