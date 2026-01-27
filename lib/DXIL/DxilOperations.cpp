@@ -13,6 +13,7 @@
 #include "dxc/DXIL/DxilConstants.h"
 #include "dxc/DXIL/DxilInstructions.h"
 #include "dxc/DXIL/DxilModule.h"
+#include "dxc/DXIL/DxilUtil.h"
 #include "dxc/Support/Global.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -2837,9 +2838,9 @@ static const OP::OpCodeProperty ExperimentalOps_OpCodeProps[] = {
      OCC::FillMatrix,
      "fillMatrix",
      Attribute::None,
-     1,
-     {{0x63}},
-     {{0x0}}}, // Overloads: hfwi
+     2,
+     {{0x200}, {0x63}},
+     {{0x0}, {0x0}}}, // Overloads: o,hfwi
     {OC::CopyConvertMatrix,
      "CopyConvertMatrix",
      OCC::CopyConvertMatrix,
@@ -3155,6 +3156,9 @@ StringRef OP::GetTypeName(Type *Ty, SmallVectorImpl<char> &Storage) {
     return ST->getStructName();
   } else if (TypeSlot == TS_Object) {
     StructType *ST = cast<StructType>(Ty);
+    if (dxilutil::IsHLSLLinAlgMatrixType(Ty))
+      return (Twine("m") + Twine(ST->getStructName().substr(21)))
+          .toStringRef(Storage);
     return ST->getStructName();
   } else if (TypeSlot == TS_Vector) {
     VectorType *VecTy = cast<VectorType>(Ty);
@@ -6530,10 +6534,9 @@ Function *OP::GetOpFunc(OpCode opCode, Type *pOverloadType) {
     A(pI32);
     break;
   case OpCode::FillMatrix:
-    A(pV);
+    EXT(0);
     A(pI32);
-    A(pI32);
-    A(pETy);
+    EXT(1);
     break;
   case OpCode::CopyConvertMatrix:
     A(pV);
@@ -6813,7 +6816,6 @@ llvm::Type *OP::GetOverloadType(OpCode opCode, llvm::Function *F) {
   case OpCode::Pack4x8:
   case OpCode::HitObject_Invoke:
   case OpCode::HitObject_Attributes:
-  case OpCode::FillMatrix:
     if (FT->getNumParams() <= 2)
       return nullptr;
     return FT->getParamType(2);
@@ -7021,6 +7023,7 @@ llvm::Type *OP::GetOverloadType(OpCode opCode, llvm::Function *F) {
     return cast<VectorType>(Ty)->getElementType();
   case OpCode::MatVecMul:
   case OpCode::MatVecMulAdd:
+  case OpCode::FillMatrix:
     if (FT->getNumParams() < 2)
       return nullptr;
     return llvm::StructType::get(Ctx,

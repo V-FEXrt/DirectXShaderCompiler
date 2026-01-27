@@ -6331,14 +6331,11 @@ class db_dxil(object):
             "FillMatrix",
             "FillMatrix",
             "fills a matrix with a scalar value",
-            "hfwi",
+            "o,hfwi",
             "",
             [
-                db_dxil_param(0, "v", "", ""),
-                db_dxil_param(
-                    2, "i32", "matrixRef", "matrix to be filled"
-                ),  # TODO: %dx.types.MatrixRef
-                db_dxil_param(3, "$o", "value", "value to fill matrix with"),
+                db_dxil_param(0, "$x0", "", "resulting matrix"),
+                db_dxil_param(2, "$x1", "value", "value to fill matrix with"),
             ],
         )
 
