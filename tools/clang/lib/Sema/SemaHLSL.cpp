@@ -253,6 +253,9 @@ enum ArBasicKind {
   // Shader Execution Reordering
   AR_OBJECT_HIT_OBJECT,
 
+  // LinAlg Matrix
+  AR_OBJECT_LINALG_MATRIX,
+
   AR_BASIC_MAXIMUM_COUNT
 };
 
@@ -606,6 +609,8 @@ const UINT g_uBasicKindProps[] = {
 
     // Shader Execution Reordering
     LICOMPTYPE_HIT_OBJECT, // AR_OBJECT_HIT_OBJECT,
+
+    LICOMPTYPE_LINALG_MATRIX, // AR_OBJECT_LINALG_MATRIX
 
     // AR_BASIC_MAXIMUM_COUNT
 };
@@ -1247,6 +1252,10 @@ static const ArBasicKind g_AnyOutputRecordCT[] = {
 static const ArBasicKind g_DxHitObjectCT[] = {AR_OBJECT_HIT_OBJECT,
                                               AR_BASIC_UNKNOWN};
 
+// LinAlg Matrix
+static const ArBasicKind g_LinAlgMatrixCT[] = {AR_OBJECT_LINALG_MATRIX,
+                                               AR_BASIC_UNKNOWN};
+
 #ifdef ENABLE_SPIRV_CODEGEN
 static const ArBasicKind g_VKBufferPointerCT[] = {AR_OBJECT_VK_BUFFER_POINTER,
                                                   AR_BASIC_UNKNOWN};
@@ -1308,6 +1317,7 @@ const ArBasicKind *g_LegalIntrinsicCompTypes[] = {
     g_ThreadNodeOutputRecordsCT, // LICOMPTYPE_THREAD_NODE_OUTPUT_RECORDS
     g_DxHitObjectCT,             // LICOMPTYPE_HIT_OBJECT
     g_RayQueryCT,                // LICOMPTYPE_RAY_QUERY
+    g_LinAlgMatrixCT,            // LICOMPTYPE_LINALG_MATRIX
     g_LinAlgCT,                  // LICOMPTYPE_LINALG
 #ifdef ENABLE_SPIRV_CODEGEN
     g_VKBufferPointerCT, // LICOMPTYPE_VK_BUFFER_POINTER
@@ -1404,7 +1414,10 @@ static const ArBasicKind g_ArBasicKindsAsTypes[] = {
     AR_OBJECT_THREAD_NODE_OUTPUT_RECORDS, AR_OBJECT_GROUP_NODE_OUTPUT_RECORDS,
 
     // Shader Execution Reordering
-    AR_OBJECT_HIT_OBJECT};
+    AR_OBJECT_HIT_OBJECT,
+
+    // LinAlg Matrix
+    AR_OBJECT_LINALG_MATRIX};
 
 // Count of template arguments for basic kind of objects that look like
 // templates (one or more type arguments).
@@ -1524,6 +1537,9 @@ static const uint8_t g_ArBasicKindsTemplateCount[] = {
 
     // Shader Execution Reordering
     0, // AR_OBJECT_HIT_OBJECT,
+
+    // LinAlg Matrix
+    0, // AR_OBJECT_LINALG_MATRIX,
 };
 
 C_ASSERT(_countof(g_ArBasicKindsAsTypes) ==
@@ -1674,6 +1690,9 @@ static const SubscriptOperatorRecord g_ArBasicKindsSubscripts[] = {
 
     // Shader Execution Reordering
     {0, MipsFalse, SampleFalse}, // AR_OBJECT_HIT_OBJECT,
+
+    // LinAlg Matrix
+    {0, MipsFalse, SampleFalse}, // AR_OBJECT_LINALG_MATRIX
 };
 
 C_ASSERT(_countof(g_ArBasicKindsAsTypes) == _countof(g_ArBasicKindsSubscripts));
@@ -1841,6 +1860,9 @@ static const char *g_ArBasicTypeNames[] = {
 
     // Shader Execution Reordering
     "HitObject",
+
+    // LinAlg Matrix
+    "__builtin_LinAlg_Matrix",
 };
 
 C_ASSERT(_countof(g_ArBasicTypeNames) == AR_BASIC_MAXIMUM_COUNT);
@@ -3605,6 +3627,9 @@ private:
       case LICOMPTYPE_HIT_OBJECT:
         paramTypes.push_back(GetBasicKindType(AR_OBJECT_HIT_OBJECT));
         break;
+      case LICOMPTYPE_LINALG_MATRIX:
+        paramTypes.push_back(GetBasicKindType(AR_OBJECT_LINALG_MATRIX));
+        break;
 #ifdef ENABLE_SPIRV_CODEGEN
       case LICOMPTYPE_VK_BUFFER_POINTER: {
         const ArBasicKind *match =
@@ -3864,6 +3889,8 @@ private:
         // Declare 'HitObject' in '::dx' extension namespace.
         DXASSERT(m_dxNSDecl, "namespace ::dx must be declared in SM6.9+");
         recordDecl = DeclareHitObjectType(*m_dxNSDecl);
+      } else if (kind == AR_OBJECT_LINALG_MATRIX) {
+        recordDecl = DeclareLinAlgMatrixType(*m_context);
       } else if (kind == AR_OBJECT_HEAP_RESOURCE) {
         recordDecl = DeclareResourceType(*m_context, /*bSampler*/ false);
         if (SM->IsSM66Plus()) {
@@ -4860,6 +4887,7 @@ public:
     case AR_OBJECT_ACCELERATION_STRUCT:
     case AR_OBJECT_RAY_DESC:
     case AR_OBJECT_HIT_OBJECT:
+    case AR_OBJECT_LINALG_MATRIX:
     case AR_OBJECT_TRIANGLE_INTERSECTION_ATTRIBUTES:
     case AR_OBJECT_RWTEXTURE2DMS:
     case AR_OBJECT_RWTEXTURE2DMS_ARRAY:
