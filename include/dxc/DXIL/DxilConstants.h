@@ -158,7 +158,7 @@ const unsigned kVecResRetStatusIndex = 1;
 
 /* <py::lines('OLOAD_DIMS-TEXT')>hctdb_instrhelp.get_max_oload_dims()</py>*/
 // OLOAD_DIMS-TEXT:BEGIN
-const unsigned kDxilMaxOloadDims = 2;
+const unsigned kDxilMaxOloadDims = 4;
 // OLOAD_DIMS-TEXT:END
 
 enum class ComponentType : uint32_t {
@@ -512,9 +512,10 @@ static const OpCodeTableID TableID = OpCodeTableID::ExperimentalOps;
 // Enumeration for ExperimentalOps DXIL operations
 enum class OpCode : unsigned {
   //
-  LinAlgMatrixReserved0 = 30, // reserved
-  LinAlgMatrixReserved1 = 31, // reserved
-  LinAlgMatrixReserved2 = 32, // reserved
+  LinAlgMatrixReserved0 = 11, // reserved
+  LinAlgMatrixReserved1 = 30, // reserved
+  LinAlgMatrixReserved2 = 31, // reserved
+  LinAlgMatrixReserved3 = 32, // reserved
 
   // Group Wave Ops
   GetGroupWaveCount = 2, // returns the number of waves in the thread group
@@ -532,7 +533,6 @@ enum class OpCode : unsigned {
   CopyConvertMatrix =
       13, // Converts and copies the element and use type of the source matrix
           // to the destination matrix with optional transpose
-  CreateMatrix = 11,     // creates a handle to a Matrix
   FillMatrix = 12,       // fills a matrix with a scalar value
   MatrixAccumulate = 24, // accumulate A or B matrix into Accumulator matrix
                          // following LHS += RHS
@@ -552,8 +552,8 @@ enum class OpCode : unsigned {
       15, // fills a matrix with data from a groupshared array
   MatrixMulOp =
       23, // applies a multiplication op to matrix C using A and B as parameters
-  MatrixOuterProduct = 29, // Outer products an M sized vector and a K sized
-                           // vector producing an MxK matrix
+  MatrixOuterProduct = 29, // Outer products an M sized vector and a N sized
+                           // vector producing an MxN matrix
   MatrixQueryAccumulatorLayout = 22, // returns comptime 0 when accumulator
                                      // matrix are A layout, 1 when B layout
   MatrixSetElement = 19, // sets the element of the matrix corresponding to the
@@ -1229,7 +1229,7 @@ enum class OpCode : unsigned {
   EXP_OPCODE(ExperimentalOps,
              HitObject_TriangleObjectPosition), // returns triangle vertices in
                                                 // object space as <9 x float>
-  EXP_OPCODE(ExperimentalOps, CreateMatrix),    // creates a handle to a Matrix
+  EXP_OPCODE(ExperimentalOps, LinAlgMatrixReserved0), // reserved
   EXP_OPCODE(ExperimentalOps, FillMatrix), // fills a matrix with a scalar value
   EXP_OPCODE(ExperimentalOps,
              CopyConvertMatrix), // Converts and copies the element and use type
@@ -1284,11 +1284,11 @@ enum class OpCode : unsigned {
       ExperimentalOps,
       MatrixAccumulateToMemory), // accumulates a matrix to groupshared memory
   EXP_OPCODE(ExperimentalOps,
-             MatrixOuterProduct), // Outer products an M sized vector and a K
-                                  // sized vector producing an MxK matrix
-  EXP_OPCODE(ExperimentalOps, LinAlgMatrixReserved0), // reserved
+             MatrixOuterProduct), // Outer products an M sized vector and a N
+                                  // sized vector producing an MxN matrix
   EXP_OPCODE(ExperimentalOps, LinAlgMatrixReserved1), // reserved
   EXP_OPCODE(ExperimentalOps, LinAlgMatrixReserved2), // reserved
+  EXP_OPCODE(ExperimentalOps, LinAlgMatrixReserved3), // reserved
 };
 // OPCODE-ENUM:END
 #undef EXP_OPCODE
@@ -1445,7 +1445,6 @@ enum class OpCodeClass : unsigned {
 
   // Linear Algebra Operations
   CopyConvertMatrix,
-  CreateMatrix,
   FillMatrix,
   MatVecMul,
   MatVecMulAdd,
@@ -1653,7 +1652,7 @@ enum class OpCodeClass : unsigned {
   NodeOutputIsValid,
   OutputComplete,
 
-  NumOpClasses = 223, // exclusive last value of enumeration
+  NumOpClasses = 222, // exclusive last value of enumeration
 };
 // OPCODECLASS-ENUM:END
 
