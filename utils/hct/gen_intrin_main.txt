@@ -400,7 +400,8 @@ void [[min_sm=6.10]] __builtin_VectorAccumulate(in LinAlg<c> InputVector, in RWB
 // TODO: Replace all int GroupSharedMem with groupshared memory
 void [[min_sm=6.10]] __builtin_LinAlg_FillMatrix(out LinAlgMatrix res, in numeric value);
 void [[min_sm=6.10]] __builtin_LinAlg_CopyConvertMatrix(int MatrixRefDest, int MatrixRefSrc, bool transpose);
-void [[min_sm=6.10]] __builtin_LinAlg_MatrixLoadFromDescriptor(int MatrixRef, resource buf, int32_only offset, int32_only stride, int32_only layout);
+void [[min_sm=6.10]] __builtin_LinAlg_MatrixLoadFromDescriptor(out LinAlgMatrix res, in ByteAddressBuffer buf, in int32_only offset, in int32_only stride, in int32_only layout);
+void [[min_sm=6.10]] __builtin_LinAlg_MatrixLoadFromDescriptor(out LinAlgMatrix res, in RWByteAddressBuffer buf, in int32_only offset, in int32_only stride, in int32_only layout);
 void [[min_sm=6.10]] __builtin_LinAlg_MatrixLoadFromMemory(int MatrixRef, int GroupSharedMem, int32_only offset, int32_only stride, int32_only layout);
 void [[min_sm=6.10]] __builtin_LinAlg_MatrixLength(int MatrixRef);
 void [[min_sm=6.10]] __builtin_LinAlg_MatrixGetCoordinate(int MatrixRef, int32_only threadLocalIndex);
