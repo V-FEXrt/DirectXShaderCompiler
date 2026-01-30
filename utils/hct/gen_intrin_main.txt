@@ -414,9 +414,8 @@ void [[min_sm=6.10]] __builtin_LinAlg_MatrixMatrixMultiply(int MatrixRefA, int M
 void [[min_sm=6.10]] __builtin_LinAlg_MatrixMatrixMultiplyAccumulate(int MatrixRefA, int MatrixRefB, int MatrixRefC);
 void [[min_sm=6.10]] __builtin_LinAlg_MatrixAccumulate(int MatrixRefRHS, int MatrixRefLHS);
 
-// TODO: Fix vector types
-void [[min_sm=6.10]] __builtin_LinAlg_MatrixVectorMultiply(int MatrixRef);
-void [[min_sm=6.10]] __builtin_LinAlg_MatrixVectorMultiplyAdd(int MatrixRef);
+void [[min_sm=6.10]] __builtin_LinAlg_MatrixVectorMultiply(out numeric<> ret, in LinAlgMatrix mat, in numeric<> input, in int32_only input_interp);
+void [[min_sm=6.10]] __builtin_LinAlg_MatrixVectorMultiplyAdd(out numeric<> ret, in LinAlgMatrix mat, in numeric<> input, in int32_only input_interp, in numeric<> bias, in int32_only bias_interp);
 
 void [[min_sm=6.10]] __builtin_LinAlg_MatrixAccumulateToDescriptor(int MatrixRef, resource buf, int32_only offset, int32_only stride, int32_only layout);
 void [[min_sm=6.10]] __builtin_LinAlg_MatrixAccumulateToMemory(int MatrixRef, int GroupSharedMem, int32_only offset, int32_only stride, int32_only layout);
