@@ -2,7 +2,7 @@
 // RUN: %dxc -T lib_6_10 -E main %s -ast-dump-implicit | FileCheck %s
 
 // CHECK: FunctionDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit used __builtin_LinAlg_MatrixStoreToDescriptor 'void (__builtin_LinAlg_Matrix, RWByteAddressBuffer, unsigned int, unsigned int, unsigned int)' extern
-// CHECK-NEXT: ParmVarDecl {{.*}} res '__restrict __builtin_LinAlg_Matrix'
+// CHECK-NEXT: ParmVarDecl {{.*}} matrix '__builtin_LinAlg_Matrix'
 // CHECK-NEXT: ParmVarDecl {{.*}} buf 'RWByteAddressBuffer'
 // CHECK-NEXT: ParmVarDecl {{.*}} offset 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} stride 'unsigned int'

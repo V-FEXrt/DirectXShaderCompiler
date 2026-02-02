@@ -2,7 +2,7 @@
 // RUN: %dxc -T lib_6_10 -E main %s -ast-dump-implicit | FileCheck %s
 
 // CHECK: FunctionDecl {{.*}} implicit used __builtin_LinAlg_MatrixLoadFromDescriptor 'void (__builtin_LinAlg_Matrix, RWByteAddressBuffer, unsigned int, unsigned int, unsigned int)' extern
-// CHECK-NEXT: ParmVarDecl {{.*}} res '__restrict __builtin_LinAlg_Matrix'
+// CHECK-NEXT: ParmVarDecl {{.*}} ret '__restrict __builtin_LinAlg_Matrix'
 // CHECK-NEXT: ParmVarDecl {{.*}} buf 'RWByteAddressBuffer'
 // CHECK-NEXT: ParmVarDecl {{.*}} offset 'unsigned int'
 // CHECK-NEXT: ParmVarDecl {{.*}} stride 'unsigned int'
