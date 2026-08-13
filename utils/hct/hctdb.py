@@ -8642,20 +8642,24 @@ class db_dxil(object):
             "reordercoherent requires SM 6.9 or later.",
         )
         self.add_valrule(
+            "Instr.LinAlgMetadataMissing",
+            "%0 matrix must have well-formed metadata.",
+        )
+        self.add_valrule(
             "Instr.LinAlgIllegalKDim",
-            "Matrix K Dimension out of bounds. K=%0 must be >= %1 and <= %2.",
+            "%0 matrix K dimension out of bounds. K=%1 must be >= %2 and <= %3.",
         )
         self.add_valrule(
             "Instr.LinAlgIllegalComponentType",
-            "Component Type '%0' not allowed in LinAlg Matrix.",
+            "Component type '%0' from %1 not allowed in LinAlg Matrix operations.",
         )
         self.add_valrule(
             "Instr.LinAlgMatrixScopeMismatch",
-            "Matrix Scope '%0' does not match expected scope %1.",
+            "%0 matrix scope '%1' does not match expected scope %2.",
         )
         self.add_valrule(
             "Instr.LinAlgMatrixScopeMismatch2",
-            "Matrix Scope '%0' does not match expected scope %1 or %2.",
+            "%0 matrix scope '%1' does not match expected scope %2 or %3.",
         )
         self.add_valrule(
             "Instr.LinAlgMatrixDimMismatch",
@@ -8663,7 +8667,7 @@ class db_dxil(object):
         )
         self.add_valrule(
             "Instr.LinAlgMatrixUseMismatch",
-            "Matrix Use '%0' does not match expected use %1.",
+            "%0 matrix use '%1' does not match expected scope %2.",
         )
         self.add_valrule(
             "Instr.LinAlgMatrixUseMismatch2",
@@ -8683,11 +8687,11 @@ class db_dxil(object):
         )
         self.add_valrule(
             "Instr.LinAlgMatrixDimVectorMismatch",
-            "%0 vector size '%1' must match matrix %2 dimension '%3'",
+            "%0 vector size '%1' must match input matrix M dimension '%2'",
         )
         self.add_valrule(
             "Instr.LinAlgMatrixDimKVecKMismatch",
-            "%0 vector size '%1' must be %2 for matrix with K '%3' and Type '%4'",
+            "%0 vector size '%1' must be %2 for input matrix with K '%3' and Type '%4'",
         )
         self.add_valrule(
             "Instr.LinAlgMatrixOutputBiasVecMismatch",
@@ -8708,6 +8712,10 @@ class db_dxil(object):
         self.add_valrule(
             "Instr.LinAlgMatrixRequiresLayout2",
             "%0 requires layout %1 or %2.",
+        )
+        self.add_valrule(
+            "Instr.LinAlgMatrix2PartsMustMatch",
+            "%0 matrix %1 '%2' must match %3 matrix %4 '%5'.",
         )
 
         # Some legacy rules:

@@ -22,7 +22,7 @@ define void @main() {
   ; CHECK-NEXT: note: at {{.*}} @dx.op.linAlgMatrixAccumulate.mC8M4N4U2S2.mC8M4N4U0S2.mC8M4N4U0S2
   %7 = call %dx.types.LinAlgMatrixC8M4N4U2S2 @dx.op.linAlgMatrixAccumulate.mC8M4N4U2S2.mC8M4N4U0S2.mC8M4N4U0S2(i32 -2147483624, %dx.types.LinAlgMatrixC8M4N4U0S2 %2, %dx.types.LinAlgMatrixC8M4N4U0S2 %2)  ; LinAlgMatrixAccumulate(matrixLHS,matrixRHS)
 
-  ; CHECK-NEXT: Function: main: error: Matrix Use 'A' does not match expected use Accumulator.
+  ; CHECK-NEXT: Function: main: error: Return matrix use 'A' does not match expected scope Accumulator.
   ; CHECK-NEXT: note: at {{.*}} @dx.op.linAlgMatrixAccumulate.mC8M4N4U0S2.mC8M4N4U0S2.mC8M4N4U0S2
   %8 = call %dx.types.LinAlgMatrixC8M4N4U0S2 @dx.op.linAlgMatrixAccumulate.mC8M4N4U0S2.mC8M4N4U0S2.mC8M4N4U0S2(i32 -2147483624, %dx.types.LinAlgMatrixC8M4N4U0S2 %2, %dx.types.LinAlgMatrixC8M4N4U0S2 %2)  ; LinAlgMatrixAccumulate(matrixLHS,matrixRHS)
 
@@ -30,11 +30,13 @@ define void @main() {
   ; CHECK-NEXT: note: at {{.*}} @dx.op.linAlgMatrixAccumulate.mC8M4N4U2S2.mC8M4N4U2S2.mC8M4N4U2S2
   %9 = call %dx.types.LinAlgMatrixC8M4N4U2S2 @dx.op.linAlgMatrixAccumulate.mC8M4N4U2S2.mC8M4N4U2S2.mC8M4N4U2S2(i32 -2147483624, %dx.types.LinAlgMatrixC8M4N4U2S2 %1, %dx.types.LinAlgMatrixC8M4N4U2S2 %1)  ; LinAlgMatrixAccumulate(matrixLHS,matrixRHS)
 
-  ; CHECK-NEXT: Function: main: error: Matrix Scope 'Wave' does not match expected scope ThreadGroup.
+  ; CHECK-NEXT: Function: main: error: Return matrix scope 'ThreadGroup' must match Arg 2 matrix scope 'Wave'.
   ; CHECK-NEXT: note: at {{.*}} @dx.op.linAlgMatrixAccumulate.mC8M4N4U2S2.mC8M4N4U2S2.mC8M4N4U1S1
   %10 = call %dx.types.LinAlgMatrixC8M4N4U2S2 @dx.op.linAlgMatrixAccumulate.mC8M4N4U2S2.mC8M4N4U2S2.mC8M4N4U1S1(i32 -2147483624, %dx.types.LinAlgMatrixC8M4N4U2S2 %1, %dx.types.LinAlgMatrixC8M4N4U1S1 %5)  ; LinAlgMatrixAccumulate(matrixLHS,matrixRHS)
 
-  ; CHECK-NEXT: Function: main: error: Matrix Scope 'Thread' does not match expected scope Wave or ThreadGroup.
+  ; CHECK-NEXT: Function: main: error: Arg 2 matrix scope 'Thread' does not match expected scope Wave or ThreadGroup.
+  ; CHECK-NEXT: note: at {{.*}} @dx.op.linAlgMatrixAccumulate.mC8M4N4U2S0.mC8M4N4U2S0.mC8M4N4U1S0
+  ; CHECK-NEXT: Function: main: error: Return matrix scope 'Thread' does not match expected scope Wave or ThreadGroup.
   ; CHECK-NEXT: note: at {{.*}} @dx.op.linAlgMatrixAccumulate.mC8M4N4U2S0.mC8M4N4U2S0.mC8M4N4U1S0
   %11 = call %dx.types.LinAlgMatrixC8M4N4U2S0 @dx.op.linAlgMatrixAccumulate.mC8M4N4U2S0.mC8M4N4U2S0.mC8M4N4U1S0(i32 -2147483624, %dx.types.LinAlgMatrixC8M4N4U2S0 %3, %dx.types.LinAlgMatrixC8M4N4U1S0 %4)  ; LinAlgMatrixAccumulate(matrixLHS,matrixRHS)
 
