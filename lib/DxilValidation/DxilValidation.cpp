@@ -1124,6 +1124,68 @@ static void ValidateLinAlgOpReturnMatrix(CallInst *CI,
   ValidateLinAlgComponentType(CI, LATT.Type, ValCtx, "return matrix");
 }
 
+static void ValidateLinAlgGSMemoryOp(CallInst *CI,
+                                     ValidationContext &ValCtx,
+                                     Value* GSMem,
+                                     Value* OffsetV,
+                                     Value* StrideV,
+                                     LinAlgTargetType& Matrix,
+                                     StringRef MatrixName) {
+  // Scope must be wave/threadgroup
+  if (Matrix.Scope != DXIL::MatrixScope::Wave &&
+      Matrix.Scope != DXIL::MatrixScope::ThreadGroup)
+    ValCtx.EmitInstrFormatError(
+        CI, ValidationRule::InstrLinAlgMatrixScopeMismatch2,
+        {MatrixName, MatrixScopeToString(Matrix.Scope), "Wave", "ThreadGroup"});
+
+  // Find the inner most type of the gs memory and count the number of scalars
+  GEPOperator *GSGEP = cast<GEPOperator>(GSMem);
+  GlobalVariable *GSGV = cast<GlobalVariable>(GSGEP->getPointerOperand());
+  Type *GSMemInnerTy = GSGV->getType();
+  unsigned GSScalarCount = 1;
+  while(SequentialType* ST = dyn_cast<SequentialType>(GSMemInnerTy)) {
+    if (ArrayType *GSMemArrTy = dyn_cast<ArrayType>(GSMemInnerTy))
+      GSScalarCount *= GSMemArrTy->getNumElements();
+    if (VectorType *GSMemVecTy = dyn_cast<VectorType>(GSMemInnerTy))
+      GSScalarCount *= GSMemVecTy->getNumElements();
+
+    GSMemInnerTy = ST->getSequentialElementType();
+  }
+
+  // if gs memory inner type != i32 then matrix elem type must match it
+  if (!GSMemInnerTy->isIntegerTy(32) &&
+      !IsComponentTypeSameNativeType(Matrix.Type, GSMemInnerTy))
+    ValCtx.EmitInstrFormatError(
+        CI, ValidationRule::InstrLinAlgMatrixGSMemTypeMustMatch,
+        {TypeToString(GSMemInnerTy), MatrixName,
+         ComponentTypeToString(Matrix.Type)});
+
+  // gs memory must be large enough for the read/write
+  unsigned ElementsPerScalar = ComponentTypeElementsPerScalar(Matrix.Type);
+  unsigned ExpectedScalarCount =
+      (Matrix.N + ElementsPerScalar - 1) / ElementsPerScalar * Matrix.M;
+  if (ExpectedScalarCount > GSScalarCount)
+    ValCtx.EmitInstrFormatError(
+        CI, ValidationRule::InstrLinAlgMatrixGSMemMustBeLargeEnough,
+        {std::to_string(GSScalarCount), std::to_string(ExpectedScalarCount)});
+
+  // if it is constant then offset must be 128-byte aligned
+  if (ConstantInt *OffsetCI = dyn_cast<ConstantInt>(OffsetV)) {
+    unsigned Offset = OffsetCI->getLimitedValue();
+    if (Offset % 128 != 0)
+      ValCtx.EmitInstrFormatError(CI, ValidationRule::InstrParamMultiple,
+                                  {"Offset", "128", std::to_string(Offset)});
+  }
+
+  // if it is constant then stride must be 16-byte aligned
+  if (ConstantInt *StrideCI = dyn_cast<ConstantInt>(StrideV)) {
+    unsigned Stride = StrideCI->getLimitedValue();
+    if (Stride % 16 != 0)
+      ValCtx.EmitInstrFormatError(CI, ValidationRule::InstrParamMultiple,
+                                  {"Stride", "16", std::to_string(Stride)});
+  }
+}
+
 static void ValidateLinAlgMatrixLength(CallInst *CI,
                                        ValidationContext &ValCtx) {
   ValidateLinAlgOpParameters(CI, ValCtx);
@@ -1234,60 +1296,7 @@ static void ValidateLinAlgMatrixStoreToMemory(CallInst *CI,
   if (!Mat)
     return;
 
-  // Scope must be wave/threadgroup
-  if (Mat->Scope != DXIL::MatrixScope::Wave &&
-      Mat->Scope != DXIL::MatrixScope::ThreadGroup)
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixScopeMismatch2,
-        {"Input", MatrixScopeToString(Mat->Scope), "Wave", "ThreadGroup"});
-
-  GEPOperator *GSGEP = cast<GEPOperator>(Op.get_memory());
-  GlobalVariable *GSMem = cast<GlobalVariable>(GSGEP->getPointerOperand());
-  Type *GSMemInnerTy = GSMem->getType();
-  unsigned GSScalarCount = 1;
-  if (PointerType *GSMemPtrTy = dyn_cast<PointerType>(GSMemInnerTy))
-    GSMemInnerTy = GSMemPtrTy->getPointerElementType();
-  if (ArrayType *GSMemArrTy = dyn_cast<ArrayType>(GSMemInnerTy)) {
-    GSMemInnerTy = GSMemArrTy->getArrayElementType();
-    GSScalarCount *= GSMemArrTy->getNumElements();
-  }
-  if (VectorType *GSMemVecTy = dyn_cast<VectorType>(GSMemInnerTy)) {
-    GSMemInnerTy = GSMemVecTy->getVectorElementType();
-    GSScalarCount *= GSMemVecTy->getNumElements();
-  }
-
-  // if gs memory inner type != i32 then matrix elem type must match it
-  if (!GSMemInnerTy->isIntegerTy(32) &&
-      !IsComponentTypeSameNativeType(Mat->Type, GSMemInnerTy))
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixGSMemTypeMustMatch,
-        {TypeToString(GSMemInnerTy), "input matrix",
-         ComponentTypeToString(Mat->Type)});
-
-  // gs memory must be large enough for the write
-  unsigned ElementsPerScalar = ComponentTypeElementsPerScalar(Mat->Type);
-  unsigned ExpectedScalarCount =
-      (Mat->N + ElementsPerScalar - 1) / ElementsPerScalar * Mat->M;
-  if (ExpectedScalarCount > GSScalarCount)
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixGSMemMustBeLargeEnough,
-        {std::to_string(GSScalarCount), std::to_string(ExpectedScalarCount)});
-
-  // if it is constant then offset must be 128-byte aligned
-  if (ConstantInt *OffsetV = dyn_cast<ConstantInt>(Op.get_offset())) {
-    unsigned Offset = OffsetV->getLimitedValue();
-    if (Offset % 128 != 0)
-      ValCtx.EmitInstrFormatError(CI, ValidationRule::InstrParamMultiple,
-                                  {"Offset", "128", std::to_string(Offset)});
-  }
-
-  // if it is constant then stride must be 16-byte aligned
-  if (ConstantInt *StrideV = dyn_cast<ConstantInt>(Op.get_stride())) {
-    unsigned Stride = StrideV->getLimitedValue();
-    if (Stride % 16 != 0)
-      ValCtx.EmitInstrFormatError(CI, ValidationRule::InstrParamMultiple,
-                                  {"Stride", "16", std::to_string(Stride)});
-  }
+  ValidateLinAlgGSMemoryOp(CI, ValCtx, Op.get_memory(), Op.get_offset(), Op.get_stride(), *Mat, "Input");
 }
 
 static void ValidateLinAlgMatVecMul(CallInst *CI, ValidationContext &ValCtx,
@@ -1467,84 +1476,13 @@ static void ValidateLinAlgMatrixAccumulateToMemory(CallInst *CI,
   if (!Mat)
     return;
 
-  // Scope must be wave/threadgroup
-  if (Mat->Scope != DXIL::MatrixScope::Wave &&
-      Mat->Scope != DXIL::MatrixScope::ThreadGroup)
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixScopeMismatch2,
-        {"Input", MatrixScopeToString(Mat->Scope), "Wave", "ThreadGroup"});
-
   // Matrix must have Accumulator use
   if (Mat->Use != DXIL::MatrixUse::Accumulator)
     ValCtx.EmitInstrFormatError(
         CI, ValidationRule::InstrLinAlgMatrixUseMismatch,
         {"Input", MatrixUseToString(Mat->Use), "Accumulator"});
 
-  GEPOperator *GSGEP = cast<GEPOperator>(Op.get_memory());
-  GlobalVariable *GSMem = cast<GlobalVariable>(GSGEP->getPointerOperand());
-  Type *GSMemInnerTy = GSMem->getType();
-  unsigned GSScalarCount = 1;
-  if (PointerType *GSMemPtrTy = dyn_cast<PointerType>(GSMemInnerTy))
-    GSMemInnerTy = GSMemPtrTy->getPointerElementType();
-  if (ArrayType *GSMemArrTy = dyn_cast<ArrayType>(GSMemInnerTy)) {
-    GSMemInnerTy = GSMemArrTy->getArrayElementType();
-    GSScalarCount *= GSMemArrTy->getNumElements();
-  }
-  if (VectorType *GSMemVecTy = dyn_cast<VectorType>(GSMemInnerTy)) {
-    GSMemInnerTy = GSMemVecTy->getVectorElementType();
-    GSScalarCount *= GSMemVecTy->getNumElements();
-  }
-
-  // if gs memory inner type != i32 then matrix elem type must match it
-  if (!GSMemInnerTy->isIntegerTy(32) &&
-      !IsComponentTypeSameNativeType(Mat->Type, GSMemInnerTy))
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixGSMemTypeMustMatch,
-        {TypeToString(GSMemInnerTy), "input matrix",
-         ComponentTypeToString(Mat->Type)});
-
-  // gs memory must be large enough for the write
-  unsigned ElementsPerScalar = ComponentTypeElementsPerScalar(Mat->Type);
-  unsigned ExpectedScalarCount =
-      (Mat->N + ElementsPerScalar - 1) / ElementsPerScalar * Mat->M;
-  if (ExpectedScalarCount > GSScalarCount)
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixGSMemMustBeLargeEnough,
-        {std::to_string(GSScalarCount), std::to_string(ExpectedScalarCount)});
-
-  // Target type must be a immarg of allowed ComponentType
-  DXIL::ComponentType Target = DXIL::ComponentType::Invalid;
-  std::optional<uint64_t> TargetV =
-      ValidateConstantIntGetValue(CI, Op.get_targetType(), ValCtx, "TargetType",
-                                  "LinAlgMatrixAccumulateToMemory");
-  if (TargetV) {
-    Target = static_cast<DXIL::ComponentType>(*TargetV);
-    ValidateLinAlgComponentType(CI, Target, ValCtx, "TargetType");
-
-    // if gs memory inner type != i32 then target elem type must match it
-    if (!GSMemInnerTy->isIntegerTy(32) &&
-        !IsComponentTypeSameNativeType(Target, GSMemInnerTy))
-      ValCtx.EmitInstrFormatError(
-          CI, ValidationRule::InstrLinAlgMatrixGSMemTypeMustMatch,
-          {TypeToString(GSMemInnerTy), "target",
-           ComponentTypeToString(Target)});
-  }
-
-  // if it is constant then offset must be 128-byte aligned
-  if (ConstantInt *OffsetV = dyn_cast<ConstantInt>(Op.get_offset())) {
-    unsigned Offset = OffsetV->getLimitedValue();
-    if (Offset % 128 != 0)
-      ValCtx.EmitInstrFormatError(CI, ValidationRule::InstrParamMultiple,
-                                  {"Offset", "128", std::to_string(Offset)});
-  }
-
-  // if it is constant then stride must be 16-byte aligned
-  if (ConstantInt *StrideV = dyn_cast<ConstantInt>(Op.get_stride())) {
-    unsigned Stride = StrideV->getLimitedValue();
-    if (Stride % 16 != 0)
-      ValCtx.EmitInstrFormatError(CI, ValidationRule::InstrParamMultiple,
-                                  {"Stride", "16", std::to_string(Stride)});
-  }
+  ValidateLinAlgGSMemoryOp(CI, ValCtx, Op.get_memory(), Op.get_offset(), Op.get_stride(), *Mat, "Input");
 }
 
 static void ValidateLinAlgConvert(CallInst *CI, ValidationContext &ValCtx) {
@@ -1687,60 +1625,8 @@ static void ValidateLinAlgMatrixLoadFromMemory(CallInst *CI,
   if (!RetMat)
     return;
 
-  // Scope must be wave/threadgroup
-  if (RetMat->Scope != DXIL::MatrixScope::Wave &&
-      RetMat->Scope != DXIL::MatrixScope::ThreadGroup)
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixScopeMismatch2,
-        {"Return", MatrixScopeToString(RetMat->Scope), "Wave", "ThreadGroup"});
+  ValidateLinAlgGSMemoryOp(CI, ValCtx, Op.get_memory(), Op.get_offset(), Op.get_stride(), *RetMat, "Return");
 
-  GEPOperator *GSGEP = cast<GEPOperator>(Op.get_memory());
-  GlobalVariable *GSMem = cast<GlobalVariable>(GSGEP->getPointerOperand());
-  Type *GSMemInnerTy = GSMem->getType();
-  unsigned GSScalarCount = 1;
-  if (PointerType *GSMemPtrTy = dyn_cast<PointerType>(GSMemInnerTy))
-    GSMemInnerTy = GSMemPtrTy->getPointerElementType();
-  if (ArrayType *GSMemArrTy = dyn_cast<ArrayType>(GSMemInnerTy)) {
-    GSMemInnerTy = GSMemArrTy->getArrayElementType();
-    GSScalarCount *= GSMemArrTy->getNumElements();
-  }
-  if (VectorType *GSMemVecTy = dyn_cast<VectorType>(GSMemInnerTy)) {
-    GSMemInnerTy = GSMemVecTy->getVectorElementType();
-    GSScalarCount *= GSMemVecTy->getNumElements();
-  }
-
-  // if gs memory inner type != i32 then matrix elem type must match it
-  if (!GSMemInnerTy->isIntegerTy(32) &&
-      !IsComponentTypeSameNativeType(RetMat->Type, GSMemInnerTy))
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixGSMemTypeMustMatch,
-        {TypeToString(GSMemInnerTy), "return matrix",
-         ComponentTypeToString(RetMat->Type)});
-
-  // gs memory must be large enough for the read
-  unsigned ElementsPerScalar = ComponentTypeElementsPerScalar(RetMat->Type);
-  unsigned ExpectedScalarCount =
-      (RetMat->N + ElementsPerScalar - 1) / ElementsPerScalar * RetMat->M;
-  if (ExpectedScalarCount > GSScalarCount)
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixGSMemMustBeLargeEnough,
-        {std::to_string(GSScalarCount), std::to_string(ExpectedScalarCount)});
-
-  // if it is constant then offset must be 128-byte aligned
-  if (ConstantInt *OffsetV = dyn_cast<ConstantInt>(Op.get_offset())) {
-    unsigned Offset = OffsetV->getLimitedValue();
-    if (Offset % 128 != 0)
-      ValCtx.EmitInstrFormatError(CI, ValidationRule::InstrParamMultiple,
-                                  {"Offset", "128", std::to_string(Offset)});
-  }
-
-  // if it is constant then stride must be 16-byte aligned
-  if (ConstantInt *StrideV = dyn_cast<ConstantInt>(Op.get_stride())) {
-    unsigned Stride = StrideV->getLimitedValue();
-    if (Stride % 16 != 0)
-      ValCtx.EmitInstrFormatError(CI, ValidationRule::InstrParamMultiple,
-                                  {"Stride", "16", std::to_string(Stride)});
-  }
 }
 
 static void ValidateLinAlgMatrixSetElement(CallInst *CI,
