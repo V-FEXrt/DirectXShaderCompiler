@@ -277,7 +277,8 @@ class Matrix {
       typename hlsl::enable_if<hlsl::is_arithmetic<T>::value, Matrix>::type
       Splat(T Val) {
     Matrix Result;
-    __builtin_LinAlg_FillMatrix(Result.__handle, Val);
+    __builtin_LinAlg_FillMatrix(Result.__handle, hlsl::is_signed<T>::value,
+                                Val);
     return Result;
   }
 
@@ -674,7 +675,8 @@ template <ComponentEnum OutTy, typename InputElTy, SIZE_TYPE M, SIZE_TYPE N>
     Matrix<OutTy, M, N, MatrixUse::Accumulator, MatrixScope::Thread> >::type
 OuterProduct(vector<InputElTy, M> VecA, vector<InputElTy, N> VecB) {
   Matrix<OutTy, M, N, MatrixUse::Accumulator, MatrixScope::Thread> Result;
-  __builtin_LinAlg_MatrixOuterProduct(Result.__handle, VecA, VecB);
+  __builtin_LinAlg_MatrixOuterProduct(
+      Result.__handle, hlsl::is_signed<InputElTy>::value, VecA, VecB);
   return Result;
 }
 
@@ -682,7 +684,8 @@ template <uint Align = 64, typename InputElTy, SIZE_TYPE M>
 typename hlsl::enable_if<hlsl::is_arithmetic<InputElTy>::value, void>::type
 InterlockedAccumulate(RWByteAddressBuffer Res, uint StartOffset,
                       vector<InputElTy, M> Vec) {
-  __builtin_LinAlg_VectorAccumulateToDescriptor(Res, StartOffset, Align, Vec);
+  __builtin_LinAlg_VectorAccumulateToDescriptor(
+      Res, StartOffset, Align, hlsl::is_signed<InputElTy>::value, Vec);
 }
 
 } // namespace linalg

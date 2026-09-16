@@ -6570,6 +6570,7 @@ Function *OP::GetOpFunc(OpCode opCode, Type *pOverloadType) {
   case OpCode::LinAlgFillMatrix:
     A(EXT(0));
     A(pI32);
+    A(pI1);
     A(EXT(1));
     break;
   case OpCode::LinAlgCopyConvertMatrix:
@@ -6693,6 +6694,7 @@ Function *OP::GetOpFunc(OpCode opCode, Type *pOverloadType) {
   case OpCode::LinAlgMatrixOuterProduct:
     A(EXT(0));
     A(pI32);
+    A(pI1);
     A(EXT(1));
     A(EXT(2));
     break;
@@ -6709,6 +6711,7 @@ Function *OP::GetOpFunc(OpCode opCode, Type *pOverloadType) {
     A(pRes);
     A(pI32);
     A(pI32);
+    A(pI1);
     A(pETy);
     break;
 
@@ -6878,7 +6881,6 @@ llvm::Type *OP::GetOverloadType(OpCode opCode, llvm::Function *F) {
   case OpCode::StorePrimitiveOutput:
   case OpCode::DispatchMesh:
   case OpCode::RawBufferVectorStore:
-  case OpCode::LinAlgVectorAccumulateToDescriptor:
     if (FT->getNumParams() <= 4)
       return nullptr;
     return FT->getParamType(4);
@@ -6912,6 +6914,7 @@ llvm::Type *OP::GetOverloadType(OpCode opCode, llvm::Function *F) {
     return FT->getParamType(1);
   case OpCode::TextureStore:
   case OpCode::TextureStoreSample:
+  case OpCode::LinAlgVectorAccumulateToDescriptor:
     if (FT->getNumParams() <= 5)
       return nullptr;
     return FT->getParamType(5);
@@ -7074,6 +7077,11 @@ llvm::Type *OP::GetOverloadType(OpCode opCode, llvm::Function *F) {
                                   FT->getParamType(2), FT->getParamType(3)});
 
   case OpCode::LinAlgFillMatrix:
+    if (FT->getNumParams() < 3)
+      return nullptr;
+    return llvm::StructType::get(Ctx,
+                                 {FT->getReturnType(), FT->getParamType(2)});
+
   case OpCode::LinAlgCopyConvertMatrix:
   case OpCode::LinAlgMatrixGetElement:
   case OpCode::LinAlgConvert:
@@ -7106,7 +7114,6 @@ llvm::Type *OP::GetOverloadType(OpCode opCode, llvm::Function *F) {
 
   case OpCode::LinAlgMatrixMultiply:
   case OpCode::LinAlgMatrixAccumulate:
-  case OpCode::LinAlgMatrixOuterProduct:
     if (FT->getNumParams() < 3)
       return nullptr;
     return llvm::StructType::get(
@@ -7118,6 +7125,12 @@ llvm::Type *OP::GetOverloadType(OpCode opCode, llvm::Function *F) {
     return llvm::StructType::get(Ctx,
                                  {FT->getReturnType(), FT->getParamType(1),
                                   FT->getParamType(3), FT->getParamType(5)});
+
+  case OpCode::LinAlgMatrixOuterProduct:
+    if (FT->getNumParams() < 4)
+      return nullptr;
+    return llvm::StructType::get(
+        Ctx, {FT->getReturnType(), FT->getParamType(2), FT->getParamType(3)});
 
   // OPCODE-OLOAD-TYPES:END
   default:

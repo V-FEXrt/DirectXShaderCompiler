@@ -36,7 +36,7 @@ void main(uint Index : SV_GroupIndex) {
   FloatOuter.InterlockedAccumulate(Output, 64);
 
   ThreadIntAccumulator IntOuter =
-      OuterProduct<ComponentType::I32>((int4)5, (int4)6);
+      OuterProduct<ComponentType::I32>((uint4)5, (uint4)6);
   IntOuter.InterlockedAccumulate(Output, 128);
 
   WaveHalfAccumulator WaveHalf = WaveHalfAccumulator::Splat(7.0h);
@@ -46,7 +46,7 @@ void main(uint Index : SV_GroupIndex) {
   WaveFloatAccumulator WaveFloat = WaveFloatAccumulator::Splat(8.0f);
   WaveFloat.InterlockedAccumulate(SharedFloat, 0, 4, MatrixLayout::RowMajor);
 
-  InterlockedAccumulate(Output, 256, (vector<int64_t, 2>)Index);
+  InterlockedAccumulate(Output, 256, (vector<uint64_t, 2>)Index);
 }
 
 // CHECK: LinAlgRuntimeInfoPresent: true
@@ -62,8 +62,8 @@ void main(uint Index : SV_GroupIndex) {
 // CHECK-NEXT: MatrixConstruction[1]: MatrixType=9, Shapes=[(2,2,0)]
 // CHECK-NEXT: OuterProduct[0]: ResultType=8, VectorInputType=8
 // CHECK-NEXT: OuterProduct[1]: ResultType=9, VectorInputType=8
-// CHECK-NEXT: OuterProduct[2]: ResultType=4, VectorInputType=4
+// CHECK-NEXT: OuterProduct[2]: ResultType=4, VectorInputType=5
 // CHECK-NEXT: AccumulateStore[0]: AccumulatorType=8, Flags=3
 // CHECK-NEXT: AccumulateStore[1]: AccumulatorType=9, Flags=3
 // CHECK-NEXT: AccumulateStore[2]: AccumulatorType=4, Flags=1
-// CHECK-NEXT: AccumulateStore[3]: AccumulatorType=6, Flags=1
+// CHECK-NEXT: AccumulateStore[3]: AccumulatorType=7, Flags=1

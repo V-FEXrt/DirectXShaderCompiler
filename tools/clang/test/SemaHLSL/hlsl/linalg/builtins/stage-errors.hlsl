@@ -30,7 +30,7 @@ void CallFunction()
 #endif
 
 #ifdef MATRIX_FILL
-  #define DO_FUNC __builtin_LinAlg_FillMatrix(mat1, 15);
+  #define DO_FUNC __builtin_LinAlg_FillMatrix(mat1, true, 15);
 #endif
 
 #ifdef MATRIX_GET_COORDINATE
@@ -82,13 +82,13 @@ void CallFunction()
   // then the test will fail with "saw unexpected diagnostic"
   uint layout = __builtin_LinAlg_MatrixQueryAccumulatorLayout();
   __builtin_LinAlg_MatrixLoadFromDescriptor(mat1, buf, 5, 5, 5, 4);
-  __builtin_LinAlg_MatrixOuterProduct(mat1, vecA, vecB);
+  __builtin_LinAlg_MatrixOuterProduct(mat1, true, vecA, vecB);
   __builtin_LinAlg_MatrixAccumulateToDescriptor(mat1, buf, 1, 2, 3, 4);
   __builtin_LinAlg_MatrixVectorMultiply(vecA, mat1, true, vecB, 1);
   __builtin_LinAlg_MatrixVectorMultiplyAdd(vecA, mat1, true, vecB, 2, vecC);
   int4 outVec;
   __builtin_LinAlg_Convert(outVec, vecA, 1, 2);
-  __builtin_LinAlg_VectorAccumulateToDescriptor(buf, 0, 64, vecA);
+  __builtin_LinAlg_VectorAccumulateToDescriptor(buf, 0, 64, true, vecA);
 
   // expected-error@+11{{builtin unavailable in shader stage 'pixel' (requires 'compute', 'mesh' or 'amplification')}}
   // expected-error@+10{{builtin unavailable in shader stage 'vertex' (requires 'compute', 'mesh' or 'amplification')}}

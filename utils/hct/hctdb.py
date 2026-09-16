@@ -6281,7 +6281,8 @@ class db_dxil(object):
             "",
             [
                 db_dxil_param(0, "$x0", "", "resulting matrix"),
-                db_dxil_param(2, "$x1", "value", "value to fill matrix with"),
+                db_dxil_param(2, "i1", "isSigned", "true if input is signed"),
+                db_dxil_param(3, "$x1", "value", "value to fill matrix with"),
             ],
         )
 
@@ -6573,8 +6574,9 @@ class db_dxil(object):
             "",
             [
                 db_dxil_param(0, "$x0", "", "resulting matrix"),
-                db_dxil_param(2, "$x1", "vectorA", "M dim vector"),
-                db_dxil_param(3, "$x2", "vectorB", "N dim vector"),
+                db_dxil_param(2, "i1", "isSigned", "true if input is signed"),
+                db_dxil_param(3, "$x1", "vectorA", "M dim vector"),
+                db_dxil_param(4, "$x2", "vectorB", "N dim vector"),
             ],
         )
 
@@ -6607,7 +6609,8 @@ class db_dxil(object):
                 db_dxil_param(2, "res", "handle", "buffer to accumulate into"),
                 db_dxil_param(3, "i32", "offset", "starting offset in the buffer"),
                 db_dxil_param(4, "i32", "align", "alignment of starting offset"),
-                db_dxil_param(5, "$o", "vector", "vector to accumulate"),
+                db_dxil_param(5, "i1", "isSigned", "true if input is signed"),
+                db_dxil_param(6, "$o", "vector", "vector to accumulate"),
             ],
         )
 

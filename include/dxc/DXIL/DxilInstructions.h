@@ -10317,7 +10317,7 @@ struct DxilInst_LinAlgFillMatrix {
   // Validation support
   bool isAllowed() const { return true; }
   bool isArgumentListValid() const {
-    if (2 != llvm::dyn_cast<llvm::CallInst>(Instr)->getNumArgOperands())
+    if (3 != llvm::dyn_cast<llvm::CallInst>(Instr)->getNumArgOperands())
       return false;
     return true;
   }
@@ -10325,11 +10325,14 @@ struct DxilInst_LinAlgFillMatrix {
   bool requiresUniformInputs() const { return false; }
   // Operand indexes
   enum OperandIdx {
-    arg_value = 1,
+    arg_isSigned = 1,
+    arg_value = 2,
   };
   // Accessors
-  llvm::Value *get_value() const { return Instr->getOperand(1); }
-  void set_value(llvm::Value *val) { Instr->setOperand(1, val); }
+  llvm::Value *get_isSigned() const { return Instr->getOperand(1); }
+  void set_isSigned(llvm::Value *val) { Instr->setOperand(1, val); }
+  llvm::Value *get_value() const { return Instr->getOperand(2); }
+  void set_value(llvm::Value *val) { Instr->setOperand(2, val); }
 };
 
 /// This instruction Converts and copies the element and use type of the source
@@ -10905,7 +10908,7 @@ struct DxilInst_LinAlgMatrixOuterProduct {
   // Validation support
   bool isAllowed() const { return true; }
   bool isArgumentListValid() const {
-    if (3 != llvm::dyn_cast<llvm::CallInst>(Instr)->getNumArgOperands())
+    if (4 != llvm::dyn_cast<llvm::CallInst>(Instr)->getNumArgOperands())
       return false;
     return true;
   }
@@ -10913,14 +10916,17 @@ struct DxilInst_LinAlgMatrixOuterProduct {
   bool requiresUniformInputs() const { return false; }
   // Operand indexes
   enum OperandIdx {
-    arg_vectorA = 1,
-    arg_vectorB = 2,
+    arg_isSigned = 1,
+    arg_vectorA = 2,
+    arg_vectorB = 3,
   };
   // Accessors
-  llvm::Value *get_vectorA() const { return Instr->getOperand(1); }
-  void set_vectorA(llvm::Value *val) { Instr->setOperand(1, val); }
-  llvm::Value *get_vectorB() const { return Instr->getOperand(2); }
-  void set_vectorB(llvm::Value *val) { Instr->setOperand(2, val); }
+  llvm::Value *get_isSigned() const { return Instr->getOperand(1); }
+  void set_isSigned(llvm::Value *val) { Instr->setOperand(1, val); }
+  llvm::Value *get_vectorA() const { return Instr->getOperand(2); }
+  void set_vectorA(llvm::Value *val) { Instr->setOperand(2, val); }
+  llvm::Value *get_vectorB() const { return Instr->getOperand(3); }
+  void set_vectorB(llvm::Value *val) { Instr->setOperand(3, val); }
 };
 
 /// This instruction Convert vector components from one interpretation to
@@ -10970,7 +10976,7 @@ struct DxilInst_LinAlgVectorAccumulateToDescriptor {
   // Validation support
   bool isAllowed() const { return true; }
   bool isArgumentListValid() const {
-    if (5 != llvm::dyn_cast<llvm::CallInst>(Instr)->getNumArgOperands())
+    if (6 != llvm::dyn_cast<llvm::CallInst>(Instr)->getNumArgOperands())
       return false;
     return true;
   }
@@ -10981,7 +10987,8 @@ struct DxilInst_LinAlgVectorAccumulateToDescriptor {
     arg_handle = 1,
     arg_offset = 2,
     arg_align = 3,
-    arg_vector = 4,
+    arg_isSigned = 4,
+    arg_vector = 5,
   };
   // Accessors
   llvm::Value *get_handle() const { return Instr->getOperand(1); }
@@ -10990,8 +10997,10 @@ struct DxilInst_LinAlgVectorAccumulateToDescriptor {
   void set_offset(llvm::Value *val) { Instr->setOperand(2, val); }
   llvm::Value *get_align() const { return Instr->getOperand(3); }
   void set_align(llvm::Value *val) { Instr->setOperand(3, val); }
-  llvm::Value *get_vector() const { return Instr->getOperand(4); }
-  void set_vector(llvm::Value *val) { Instr->setOperand(4, val); }
+  llvm::Value *get_isSigned() const { return Instr->getOperand(4); }
+  void set_isSigned(llvm::Value *val) { Instr->setOperand(4, val); }
+  llvm::Value *get_vector() const { return Instr->getOperand(5); }
+  void set_vector(llvm::Value *val) { Instr->setOperand(5, val); }
 };
 
 /// This instruction triggers a breakpoint if debugging is enabled

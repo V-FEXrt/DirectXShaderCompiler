@@ -1327,6 +1327,18 @@ static void ValidateLinAlgMatrixStoreToMemory(CallInst *CI,
   }
 }
 
+static void ValidateLinAlgIsSigned(CallInst *CI, Value *IsSignedValue,
+                                   Type *InputTy, ValidationContext &ValCtx,
+                                   const char *OpName) {
+  std::optional<uint64_t> IsSigned = ValidateConstantIntGetValue(
+      CI, IsSignedValue, ValCtx, "IsSigned", OpName);
+  Type *ScalarTy = InputTy->getScalarType();
+  if (IsSigned && ScalarTy->isFloatingPointTy() && *IsSigned != 1)
+    ValCtx.EmitInstrFormatError(
+        CI, ValidationRule::InstrLinAlgMatrixUnsignedFloatTypeNotAllowed,
+        {TypeToString(ScalarTy)});
+}
+
 static void ValidateLinAlgMatVecMul(CallInst *CI, ValidationContext &ValCtx,
                                     const char *OpName = "LinAlgMatVecMul") {
   ValidateLinAlgOpParameters(CI, ValCtx);
@@ -1378,15 +1390,8 @@ static void ValidateLinAlgMatVecMul(CallInst *CI, ValidationContext &ValCtx,
         {"Output", std::to_string(OutputVecTy->getNumElements()),
          std::to_string(Mat->M)});
 
-  // Sign bit must be immarg and must be true if output vec is a
-  // native floating point type
-  std::optional<uint64_t> IsSigned = ValidateConstantIntGetValue(
-      CI, Op.get_isOutputSigned(), ValCtx, "IsSigned", OpName);
-  if (IsSigned && OutputVecTy->getElementType()->isFloatingPointTy() &&
-      *IsSigned != 1)
-    ValCtx.EmitInstrFormatError(
-        CI, ValidationRule::InstrLinAlgMatrixUnsignedFloatTypeNotAllowed,
-        {TypeToString(OutputVecTy->getElementType())});
+  ValidateLinAlgIsSigned(CI, Op.get_isOutputSigned(), OutputVecTy, ValCtx,
+                         OpName);
 }
 
 static void ValidateLinAlgMatVecMulAdd(CallInst *CI,
@@ -1666,6 +1671,8 @@ ValidateLinAlgVectorAccumulateToDescriptor(CallInst *CI,
                                            ValidationContext &ValCtx) {
   ValidateLinAlgOpParameters(CI, ValCtx);
   DxilInst_LinAlgVectorAccumulateToDescriptor Op(CI);
+  ValidateLinAlgIsSigned(CI, Op.get_isSigned(), Op.get_vector()->getType(),
+                         ValCtx, "LinAlgVectorAccumulateToDescriptor");
 
   // handle must be a UAV Raw buffer (RWByteAddressBuffer)
   DXIL::ComponentType ResCompTy;
@@ -1695,6 +1702,9 @@ ValidateLinAlgVectorAccumulateToDescriptor(CallInst *CI,
 static void ValidateLinAlgFillMatrix(CallInst *CI, ValidationContext &ValCtx) {
   ValidateLinAlgOpReturnMatrix(CI, ValCtx);
   ValidateLinAlgOpParameters(CI, ValCtx);
+  DxilInst_LinAlgFillMatrix Op(CI);
+  ValidateLinAlgIsSigned(CI, Op.get_isSigned(), Op.get_value()->getType(),
+                         ValCtx, "LinAlgFillMatrix");
   std::optional<LinAlgTargetType> RetMat =
       GetCheckedLATT(CI->getType(), ValCtx);
   if (!RetMat)
@@ -2013,6 +2023,8 @@ static void ValidateLinAlgMatrixOuterProduct(CallInst *CI,
   ValidateLinAlgOpReturnMatrix(CI, ValCtx);
   ValidateLinAlgOpParameters(CI, ValCtx);
   DxilInst_LinAlgMatrixOuterProduct Op(CI);
+  ValidateLinAlgIsSigned(CI, Op.get_isSigned(), Op.get_vectorA()->getType(),
+                         ValCtx, "LinAlgMatrixOuterProduct");
   VectorType *AVecTy = cast<VectorType>(Op.get_vectorA()->getType());
   VectorType *BVecTy = cast<VectorType>(Op.get_vectorB()->getType());
   std::optional<LinAlgTargetType> RetMat =

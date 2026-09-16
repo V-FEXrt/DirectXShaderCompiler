@@ -964,10 +964,12 @@ private:
             LinAlgMatrixInfo Result;
             if (!GetLinAlgMatrixInfo(CI->getType(), Result))
               break;
+            bool IsSigned =
+                cast<ConstantInt>(Op.get_isSigned())->getZExtValue() != 0;
             PSVLinAlgOuterProduct0 Record = {
                 static_cast<uint8_t>(Result.Type),
                 static_cast<uint8_t>(GetVectorOrScalarComponentType(
-                    Op.get_vectorA()->getType())),
+                    Op.get_vectorA()->getType(), IsSigned)),
                 {0, 0}};
             if (std::find_if(
                     m_LinAlgOuterProducts.begin(), m_LinAlgOuterProducts.end(),
@@ -1014,8 +1016,10 @@ private:
           }
           case DXIL::OpCode::LinAlgVectorAccumulateToDescriptor: {
             DxilInst_LinAlgVectorAccumulateToDescriptor Op(CI);
-            DXIL::ComponentType Type =
-                GetVectorOrScalarComponentType(Op.get_vector()->getType());
+            bool IsSigned =
+                cast<ConstantInt>(Op.get_isSigned())->getZExtValue() != 0;
+            DXIL::ComponentType Type = GetVectorOrScalarComponentType(
+                Op.get_vector()->getType(), IsSigned);
             auto It = std::find_if(
                 m_LinAlgAccumulateStores.begin(),
                 m_LinAlgAccumulateStores.end(),

@@ -6783,13 +6783,14 @@ Value *TranslateLinAlgFillMatrix(CallInst *CI, IntrinsicOp IOP,
   Value *MatrixPtr = CI->getArgOperand(1);
   DXASSERT_NOMSG(isa<PointerType>(MatrixPtr->getType()));
   Type *MatrixType = MatrixPtr->getType()->getPointerElementType();
-  Value *Scalar = CI->getArgOperand(2);
+  Value *IsSigned = CI->getArgOperand(2);
+  Value *Scalar = CI->getArgOperand(3);
 
   Constant *OpArg = HlslOp->GetU32Const((unsigned)OpCode);
   Function *DxilFunc =
       HlslOp->GetOpFunc(OpCode, {MatrixType, Scalar->getType()});
 
-  Value *Matrix = Builder.CreateCall(DxilFunc, {OpArg, Scalar});
+  Value *Matrix = Builder.CreateCall(DxilFunc, {OpArg, IsSigned, Scalar});
   Builder.CreateStore(Matrix, MatrixPtr);
 
   return nullptr;
@@ -6913,14 +6914,15 @@ Value *TranslateLinAlgMatrixOuterProduct(
   Value *MatrixPtr = CI->getArgOperand(1);
   DXASSERT_NOMSG(isa<PointerType>(MatrixPtr->getType()));
   Type *MatrixType = MatrixPtr->getType()->getPointerElementType();
-  Value *VecA = CI->getArgOperand(2);
-  Value *VecB = CI->getArgOperand(3);
+  Value *IsSigned = CI->getArgOperand(2);
+  Value *VecA = CI->getArgOperand(3);
+  Value *VecB = CI->getArgOperand(4);
 
   Constant *OpArg = HlslOp->GetU32Const((unsigned)OpCode);
   Function *DxilFunc =
       HlslOp->GetOpFunc(OpCode, {MatrixType, VecA->getType(), VecB->getType()});
 
-  Value *Matrix = Builder.CreateCall(DxilFunc, {OpArg, VecA, VecB});
+  Value *Matrix = Builder.CreateCall(DxilFunc, {OpArg, IsSigned, VecA, VecB});
   Builder.CreateStore(Matrix, MatrixPtr);
 
   return nullptr;
@@ -7209,13 +7211,14 @@ Value *TranslateLinAlgVectorAccumulateToDescriptor(
   Value *ResHandle = CI->getArgOperand(1);
   Value *Offset = CI->getArgOperand(2);
   Value *Align = CI->getArgOperand(3);
-  Value *Vector = CI->getArgOperand(4);
+  Value *IsSigned = CI->getArgOperand(4);
+  Value *Vector = CI->getArgOperand(5);
 
   // Get the DXIL function for the operation
   Function *DxilFunc = HlslOp->GetOpFunc(OpCode, Vector->getType());
 
-  return Builder.CreateCall(DxilFunc,
-                            {OpArg, ResHandle, Offset, Align, Vector});
+  return Builder.CreateCall(
+      DxilFunc, {OpArg, ResHandle, Offset, Align, IsSigned, Vector});
 }
 
 } // namespace
